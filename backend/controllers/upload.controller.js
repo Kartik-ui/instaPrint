@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../firebase.js";
 import { ApiError } from "../utils/apiError.js";
@@ -13,10 +14,11 @@ const uploadFile = asyncHandler(async (req, res) => {
 
   const uniqueId = uuidv4();
   const secureCode = Math.floor(100000 + Math.random() * 900000);
+  const hashedCode = await bcrypt.hash(secureCode.toString(), 10);
 
   const fileData = {
     fileUrl: result.secure_url,
-    code: secureCode,
+    code: hashedCode,
     createdAt: new Date(),
     accessed: false,
   };
@@ -25,7 +27,13 @@ const uploadFile = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(201, fileData, "File uploaded successfully"));
+    .json(
+      new ApiResponse(
+        201,
+        { uniqueId, secureCode, ...fileData },
+        "File uploaded successfully"
+      )
+    );
 });
 
 const verifySecureCode = asyncHandler(async (req, res) => {
@@ -37,11 +45,12 @@ const verifySecureCode = asyncHandler(async (req, res) => {
   if (!doc.exists) throw new ApiError(404, "Invalid link");
 
   const data = doc.data();
-
-  if (data.code !== secureCode) throw new ApiError(400, "Invalid secure code");
-
   if (data.accessed)
     throw new ApiError(400, "Secure code has already been used");
+
+  const isMatch = await bcrypt.compare(secureCode.toString(), data.code);
+
+  if (!isMatch) throw new ApiError(400, "Invalid secure code");
 
   await docRef.update({ accessed: true });
 
