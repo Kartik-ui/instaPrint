@@ -45,8 +45,8 @@ const verifySecureCode = asyncHandler(async (req, res) => {
   if (!doc.exists) throw new ApiError(404, "Invalid link");
 
   const data = doc.data();
-  if (data.accessed)
-    throw new ApiError(400, "Secure code has already been used");
+  // if (data.accessed)
+  //   throw new ApiError(400, "Secure code has already been used");
 
   const isMatch = await bcrypt.compare(secureCode.toString(), data.code);
 
@@ -59,4 +59,24 @@ const verifySecureCode = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, data, "Secure code verified successfully"));
 });
 
-export { uploadFile, verifySecureCode };
+const validateLink = asyncHandler(async (req, res) => {
+  const { uniqueLink } = req.params;
+  const record = await db.collection("printFiles").doc(uniqueLink).get();
+
+  if (!record.exists) throw new ApiError(404, "Invalid Link");
+
+  return res.status(200).json(new ApiResponse(200, {}, "Link is valid"));
+});
+
+const getPrints = asyncHandler(async (req, res) => {
+  const { uniqueLink } = req.params;
+  const record = await await db.collection("printFiles").doc(uniqueLink).get();
+
+  if (!record.exists) throw new ApiError(404, "No record found");
+  const data = await record.data();
+  return res
+    .status(200)
+    .json(new ApiResponse(200, data, "Record retrieved successfully"));
+});
+
+export { getPrints, uploadFile, validateLink, verifySecureCode };

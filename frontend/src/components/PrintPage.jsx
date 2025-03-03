@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { API_URL } from "@/config/config";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePrintContext } from "../context/PrintContext";
 
 const PrintPage = () => {
@@ -11,16 +12,43 @@ const PrintPage = () => {
   const [prints, setPrints] = useState(1);
   const [copies, setCopies] = useState(1);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(`${API_URL}/get-prints/${uniqueLink}`);
+    };
+  }, []);
+
   if (!isVerified) {
     return <div>Access denied. Please verify your secure code.</div>;
   }
 
   const handlePrint = () => {
-    // Simulating print action
-    toast({
-      title: "Success",
-      description: `Printing ${prints} print(s) with ${copies} copy(ies) each.`,
-    });
+    if (!uploadedFile) {
+      toast({
+        title: "Error",
+        description: "No file available for printing!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create an invisible iframe for direct printing
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = uploadedFile; // Cloudinary file URL
+    document.body.appendChild(iframe);
+
+    // Wait for the document to load and then print
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      document.body.removeChild(iframe);
+
+      toast({
+        title: "Success",
+        description: `Printing ${prints} print(s) with ${copies} copy(ies) each.`,
+      });
+    };
   };
 
   return (
@@ -44,7 +72,7 @@ const PrintPage = () => {
               type="number"
               min="1"
               value={prints}
-              onChange={(e) => setPrints(e.target.value)}
+              onChange={(e) => setPrints(Number(e.target.value))}
             />
           </div>
           <div>
@@ -59,7 +87,7 @@ const PrintPage = () => {
               type="number"
               min="1"
               value={copies}
-              onChange={(e) => setCopies(e.target.value)}
+              onChange={(e) => setCopies(Number(e.target.value))}
             />
           </div>
           <Button onClick={handlePrint} className="w-full">

@@ -12,7 +12,7 @@ const App = () => {
         <div className="container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/access" element={<OwnerAccessPage />} />
+            <Route path="/access/:uniqueCode" element={<OwnerAccessPage />} />
             <Route path="/print" element={<PrintPage />} />
           </Routes>
         </div>
